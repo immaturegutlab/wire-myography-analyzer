@@ -1,144 +1,158 @@
-# Methods Section: Wire Myography Contractility Analysis
+# METHODS SECTION - Wire Myography Analysis
 
-## For Publication -- Immature Gut Biology Lab, UC Davis
-
-Version: 3.1 (February 2026)
+## For Publication in Methods Section
 
 ---
 
-## Full Methods Text
+## Contractility Data Acquisition and Analysis
 
-### Contractility Data Acquisition
+### Tissue Preparation and Recording
+Segments of small intestine (approximately 2-3 mm in length) were mounted on a wire myograph (DMT620M, Danish Myo Technology, Denmark) in Krebs-Ringer solution maintained at 37Â°C and continuously bubbled with 95% Oâ‚‚/5% COâ‚‚. Tissues were equilibrated under 5 mN resting tension for 30 minutes before baseline recordings. Spontaneous contractile activity was recorded continuously using LabChart software (ADInstruments) at a sampling rate of 250 Hz.
 
-Segments of murine small intestine (approximately 2-3 mm in length) were mounted on a wire myograph (DMT620M, Danish Myo Technology, Denmark) in Krebs-Ringer bicarbonate solution maintained at 37C and continuously bubbled with 95% O2/5% CO2. Tissues were equilibrated under 5 mN resting tension for 30 minutes before recordings began. Spontaneous contractile activity was recorded continuously using LabChart software (ADInstruments, Colorado Springs, CO) at a sampling rate of 250 Hz. Force data were exported as tab-delimited text files for offline analysis.
+### Experimental Protocol
+[ADAPT THIS SECTION TO YOUR SPECIFIC EXPERIMENTS]
 
-### Experimental Protocols
+Following baseline recording, tissues were exposed to [drug/treatment]. For mechanosensitivity experiments, [describe your mechanical stretch protocol]. For calcium handling experiments, tissues were treated with [ryanodine/thapsigargin concentrations]. For Piezo1 agonist experiments, Yoda2 (25 ÂµM) was applied following stable baseline recordings.
 
-[ADAPT TO YOUR SPECIFIC EXPERIMENTS]
+### Contraction Detection and Quantification
+Contractile activity was analyzed using custom Python scripts (Python 3.x with NumPy, SciPy, and Pandas libraries). Raw force traces were exported from LabChart as tab-delimited text files containing time and force data. Automated peak detection was performed using SciPy's `find_peaks` function with the following validated criteria:
 
-**Piezo1 mechanosensitivity:** Following stable baseline recording (150 seconds), the Piezo1 agonist Yoda2 (25 uM) was applied to the bath. Post-drug contractile activity was recorded for an additional 150 seconds.
+**Detection Parameters:**
+- Peak height: >=0.05 mN (absolute height above baseline)
+- Peak prominence: >=0.05 mN (local peak height relative to surrounding baseline)
+- Minimum peak distance: 250 samples (1.0 second at 250 Hz sampling rate)
+- Minimum peak width: 75 samples (0.3 seconds)
+- Analysis window: first 150 seconds of each recording
 
-**Ryanodine calcium store depletion:** After baseline recording, ryanodine (100 uM) was applied to deplete intracellular calcium stores via ryanodine receptor blockade. Post-drug activity was recorded, followed by washout and a second Yoda2 application to assess remaining mechanosensitivity.
-
-**Thapsigargin calcium store depletion:** Thapsigargin (10 uM) was applied to inhibit SERCA-mediated calcium reuptake into the sarcoplasmic reticulum. Post-drug activity was recorded, followed by a Yoda2 application.
-
-### Automated Contraction Detection and Analysis
-
-Contractile activity was analyzed using Wire Myography Analyzer v3.1, a custom Python application (Python 3.x) utilizing NumPy, SciPy, and Pandas libraries. Automated peak detection was performed on raw force traces using SciPy's `find_peaks` algorithm with the following empirically validated parameters:
-
-- Minimum peak prominence: 0.05 mN (local peak height relative to surrounding baseline)
-- Minimum peak height: 0.05 mN (absolute height above calculated baseline)
-- Minimum inter-peak distance: 1.0 second (250 samples at 250 Hz)
-- Minimum peak width: 0.3 seconds (75 samples at 250 Hz)
-
-These parameters were optimized for murine intestinal smooth muscle physiology through systematic testing across recordings from multiple developmental ages (P7 through adult), genotypes (wild-type and ICC-specific Piezo1 knockout), sexes, and pharmacological conditions. The minimum peak width filter (0.3 seconds) was calibrated to exclude electrical noise spikes while retaining faster physiological contractions observed in drug-treated and developing tissues.
+These parameters were empirically optimized to reliably detect physiological contractions while filtering baseline noise and movement artifacts.
 
 ### Baseline Calculation
+The baseline tone for each recording was calculated as the 10th percentile of the force signal, providing a robust estimate of the relaxed state that is resistant to outliers and transient contractions.
 
-Baseline tone for each recording was calculated as the 10th percentile of the force signal within the analysis window, providing a robust estimate of the relaxed state resistant to outliers from transient contractions or movement artifacts.
+### Overall Contractility Metrics
+For each recording, the following metrics were calculated:
 
-### Analysis Window Standardization
+**Frequency and Amplitude:**
+- Contraction frequency: Number of detected peaks per minute (contractions per minute, cpm)
+- Mean amplitude: Average peak force relative to baseline (mN)
+- Amplitude variability: Coefficient of variation (CV%) of peak amplitudes
 
-To ensure fair comparisons across recordings and experimental conditions, all metrics were calculated from a standardized 150-second analysis window beginning at the start of each recording segment. This approach avoids confounding effects from contractile rundown that occurs in longer ex vivo recordings and ensures equivalent sampling duration across all conditions.
+**Temporal Parameters:**
+- Mean period: Average time between successive contractions (seconds)
+- Period variability: Coefficient of variation (CV%) of inter-contraction intervals
 
-### Contractility Metrics
+**Contraction Kinetics:**
+Kinetic parameters were calculated for each contraction by detecting contraction start and end points at 10% of peak amplitude:
+- Duration: Total contraction time from start to end (seconds)
+- Rise time: Time from contraction start to peak (seconds)
+- Relaxation time: Time from peak to contraction end (seconds)
+- Rise/fall ratio: Ratio of rise time to relaxation time (dimensionless)
+- Maximum contraction rate (dF/dt max): Peak rate of force development (mN/second)
+- Maximum relaxation rate (dF/dt min): Peak rate of force decline (mN/second)
 
-For each recording, the following metrics were computed:
+**Integral and Normalized Metrics:**
+- Total integral force: Area under the force-time curve above baseline (mN*seconds), calculated using trapezoidal integration
+- Force per contraction: Total integral divided by number of contractions (mN*seconds)
+- Force per minute: Total integral normalized to recording duration (mN*seconds/min)
+- Duty cycle: Percentage of recording time spent in active contraction (%)
 
-**Frequency and amplitude:** Contraction frequency was calculated as the number of detected peaks per minute (contractions per minute, cpm). Mean amplitude was defined as the average peak force relative to the calculated baseline (mN). Amplitude variability was expressed as the coefficient of variation (CV%) of peak amplitudes.
-
-**Temporal parameters:** Mean contractile period was calculated as the average time between successive contraction peaks (seconds). Period variability (CV%) quantified rhythmicity, with higher values indicating more irregular contraction patterns.
-
-**Contraction kinetics:** For each detected contraction, start and end boundaries were identified at 10% of peak amplitude above baseline. From these boundaries: total contraction duration (start to end, seconds), rise time (start to peak, seconds), relaxation time (peak to end, seconds), rise rate (amplitude divided by rise time, mN/second), and relaxation rate (amplitude divided by relaxation time, mN/second) were calculated. Width at half-maximum (FWHM) provided an independent measure of contraction duration at 50% of peak amplitude.
-
-**Integral and tonic metrics:** Total integral force (mN-seconds) was calculated by trapezoidal integration of the force signal above baseline. Baseline tone (mN) represented the resting force level. Duty cycle (%) quantified the fraction of time the tissue spent in active contraction versus quiescence. Incomplete relaxation events, where the force between contractions did not return below 10% of peak amplitude, were quantified to assess tonic contraction behavior.
-
-**Derived indices:** Amplitude-frequency product (mN x cpm) provided a composite measure of contractile output. Contraction work index (integral force per contraction, mN-seconds) quantified the mechanical work per contractile event. Force per minute (mN-seconds/min) normalized total contractile output to time.
+**Tonic Properties:**
+- Baseline tone: Resting force level, 10th percentile of force signal (mN)
+- Phasic/tonic ratio: Ratio of phasic contractile force to tonic baseline force
+- Incomplete relaxation: Percentage of contractions where the trough before next contraction remains above baseline + 10% of amplitude (%)
 
 ### Time-Resolved Analysis
+To assess temporal changes in contractility (e.g., during drug washout or following interventions), metrics were also calculated in 10-second time bins throughout each recording. This binned analysis included amplitude, frequency, period, contraction duration, rise time, and relaxation time, allowing visualization of dynamic changes in contractile behavior.
 
-To capture dynamic changes in contractility during drug application or washout, all metrics were additionally calculated in 10-second time bins across the 150-second analysis window. This temporal resolution enabled visualization of onset kinetics, progressive effects, and recovery patterns following pharmacological interventions.
-
-### Biological vs. Technical Replicates
-
-Multiple tissue segments (technical replicates) from the same animal were averaged to produce a single value per animal per condition before group-level statistical analysis. This approach ensures that the experimental unit (n) represents biological replicates (individual animals) rather than inflated counts from multiple segments.
-
-### Quality Control
-
-Automated validation plots were generated for every recording, displaying the full force trace with detected peaks marked, the calculated baseline, and the detection threshold. All plots were visually inspected to confirm accurate peak identification. Recordings with significant movement artifacts, unstable baselines, or equipment malfunctions were excluded from analysis.
+### Quality Control and Validation
+All detected peaks were visually validated using automatically generated validation plots showing the full force trace with detected peaks marked. A zoomed view of the first 60 seconds was included to verify accurate detection of individual contractions. Recordings with significant movement artifacts or unstable baselines were excluded from analysis.
 
 ### Statistical Analysis
+[ADAPT THIS SECTION TO YOUR STATISTICAL APPROACH]
 
-[ADAPT TO YOUR STATISTICAL APPROACH]
-
-Data are presented as mean +/- SEM. For within-subject comparisons (baseline vs. drug treatment in the same tissue), paired Student's t-tests were used. For between-group comparisons (e.g., male vs. female, wild-type vs. knockout), unpaired Student's t-tests (two groups) or one-way ANOVA with Tukey's HSD post-hoc test (three or more groups) were performed. Percent change from baseline was calculated for each tissue segment to normalize for inter-animal variability. Statistical significance was set at P < 0.05. Statistical analyses and graphing were performed using GraphPad Prism (version [X]).
+Data are presented as mean Â± SEM. For paired comparisons (e.g., baseline vs. drug treatment in the same tissue), paired Student's t-tests were used. For comparisons between genotypes or treatment groups, unpaired Student's t-tests or one-way ANOVA with post-hoc tests were performed as appropriate. Statistical significance was set at P < 0.05. All statistical analyses were performed using GraphPad Prism [version].
 
 ### Data and Code Availability
-
-The Wire Myography Analyzer source code and documentation are available at [GitHub repository URL / Zenodo DOI]. Raw LabChart recordings and processed data files are available from the corresponding author upon reasonable request.
-
----
-
-## Condensed Version (for space-limited journals)
-
-Spontaneous contractile activity of intestinal segments mounted on a wire myograph (DMT620M) was recorded at 250 Hz using LabChart (ADInstruments). Contractions were detected using automated peak detection (Wire Myography Analyzer v3.1; SciPy find_peaks) with validated parameters: prominence and height thresholds of 0.05 mN, minimum inter-peak distance of 1.0 second, and minimum peak width of 0.3 seconds. Metrics including contraction frequency (cpm), amplitude (mN), period (seconds), and kinetic parameters (duration, rise time, relaxation time, rise and relaxation rates) were calculated from standardized 150-second analysis windows. Time-resolved analysis was performed in 10-second bins. Technical replicates from the same animal were averaged before statistical comparison. All detected peaks were visually validated. Data are mean +/- SEM; P < 0.05 considered significant. Analysis code is available at [repository URL].
+The Python analysis scripts used in this study are available at [GitHub repository / supplementary materials]. Raw LabChart files and processed data are available upon reasonable request.
 
 ---
 
-## Parameter Summary Table
+## Alternative Condensed Version (for space-limited journals):
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Sampling rate | 250 Hz | LabChart acquisition setting |
-| Peak prominence | 0.05 mN | Minimum local height to distinguish from noise |
-| Peak height | 0.05 mN | Absolute threshold above baseline |
-| Minimum peak distance | 1.0 sec (250 samples) | Physiological minimum for intestinal contractions |
-| Minimum peak width | 0.3 sec (75 samples) | Excludes electrical noise; retains fast contractions |
-| Analysis window | 150 sec | Avoids rundown; standardizes comparisons |
-| Bin duration | 10 sec | Temporal resolution for drug onset/offset |
-| Baseline method | 10th percentile | Robust to outlier contractions |
-| Kinetic boundaries | 10% of peak amplitude | Standard threshold for contraction start/end |
+### Contractility Analysis
+Spontaneous contractile activity of intestinal segments mounted on a wire myograph was recorded at 250 Hz using LabChart (ADInstruments). Contractions were detected using automated peak detection (SciPy find_peaks) with validated parameters: prominence >=0.05 mN, height >=0.05 mN, minimum spacing 1.0 second, minimum width 0.3 seconds, standardized to the first 150 seconds of each recording. Metrics calculated included contraction frequency (cpm), amplitude (mN), period (seconds), and kinetic parameters (duration, rise time, relaxation time). Time-resolved analysis was performed in 10-second bins. All detected peaks were visually validated. Statistical comparisons were made using [appropriate tests]. Data are mean Â± SEM; P < 0.05 considered significant.
 
 ---
 
-## Software Citation
+## Key Points for Methods Section:
 
-> Contractile parameters were extracted using Wire Myography Analyzer v3.1 (Bautista G, Immature Gut Biology Lab, UC Davis), a custom Python application implementing scipy.signal.find_peaks for contraction detection, pandas for data management, and matplotlib for visualization. Source code is available at [repository URL].
+### What to Include:
+âœ… Sampling rate (250 Hz)
+âœ… Detection algorithm (SciPy find_peaks)
+âœ… Detection parameters with justification
+âœ… Baseline calculation method
+âœ… Metrics calculated
+âœ… Quality control approach
+âœ… Statistical methods
 
----
+### What to Cite:
+- LabChart software (ADInstruments)
+- Python libraries (NumPy, SciPy, Pandas)
+- Wire myograph system (DMT or equivalent)
+- Statistical software (GraphPad Prism or equivalent)
 
-## Reviewer FAQ
-
-**"How were detection parameters validated?"**
-Parameters were empirically optimized by systematic testing across recordings spanning multiple developmental ages (P7 through adult), both sexes, wild-type and knockout genotypes, and multiple pharmacological conditions. Validation plots for every recording were visually inspected to confirm detection accuracy.
-
-**"What about movement artifacts?"**
-The minimum peak width filter (0.3 seconds) excludes sharp electrical or mechanical spikes. The minimum inter-peak distance (1.0 second) prevents double-counting. Visual validation of all recordings provides a final quality check, and recordings with significant artifacts were excluded.
-
-**"Why 10th percentile for baseline?"**
-The 10th percentile is robust to outliers and represents the true relaxed state more reliably than the minimum (which may capture transient dips) or the mean (which is pulled upward by contractions).
-
-**"Why a 150-second analysis window?"**
-Ex vivo intestinal preparations exhibit contractile rundown over extended recording periods. The first 150 seconds provides consistent baseline measurements and sufficient duration for accurate frequency and kinetic calculations while avoiding late-recording amplitude decline.
-
-**"How do you handle tissues with very low amplitude contractions (e.g., after drug treatment)?"**
-Recordings where mean amplitude falls below 0.03 mN are flagged for manual review but not automatically excluded. This allows detection of genuine low-amplitude activity while alerting the investigator to potential noise contamination in the measurement.
-
-**"Are the kinetics measurements validated?"**
-Rise time and relaxation time are calculated from contraction boundaries defined at 10% of peak amplitude, a standard electrophysiology convention. Width at half-maximum (FWHM) provides an independent kinetic measurement for cross-validation.
+### Optional Supplementary Information:
+- Full Python code
+- Example validation plots
+- Parameter optimization details
+- Comparison with manual analysis
 
 ---
 
-## Notes for Specific Study Types
+## Suggested Figures for Methods:
 
-**Piezo1 mechanosensitivity studies:**
-Emphasize that detection parameters were sensitive enough to capture drug-induced changes in contraction amplitude and kinetics, not just frequency. The 0.05 mN threshold allows detection of weakened contractions following Piezo1 agonist application.
+**Figure/Supplementary Figure:**
+"Representative force trace showing automated contraction detection"
+- Panel A: Full 2-minute baseline recording with detected peaks marked
+- Panel B: Zoomed view showing individual contraction with kinetic measurements (duration, rise time, relaxation time) annotated
+- Panel C: Example of rejected artifact (sharp vertical spike)
+- Panel D: Validation of automated vs. manual detection (correlation plot)
 
-**Genotype comparisons (WT vs. KO):**
-Note that irregular contraction patterns in knockout mice (reflected by higher period CV%) represent biological phenotype, not detection error. The analyzer's quality flagging system identifies recordings that may need manual review.
+---
 
-**Developmental studies (neonatal vs. adult):**
-The 0.05 mN default threshold works across developmental ages. For very early neonatal tissue (P7) with extremely weak contractions, the threshold can be lowered to 0.03 mN via command-line parameter.
+## Common Reviewer Questions - Be Prepared to Address:
 
-**Calcium handling studies (Ryanodine/Thapsigargin):**
-When calcium store depletion abolishes contractions, the amplitude threshold prevents counting of baseline noise as contractile events. Zero-contraction recordings are reported as such rather than generating artifactual data.
+1. **"How were detection parameters validated?"**
+   â†’ Systematic testing on subset of recordings, comparison with manual counting, optimization to minimize false positives/negatives
+
+2. **"What about movement artifacts?"**
+   â†’ Visual validation of all recordings, exclusion criteria, minimum distance requirement filters rapid artifacts
+
+3. **"Why 10th percentile for baseline?"**
+   â†’ Robust to outliers, represents true relaxed state, less sensitive to occasional deep relaxations than minimum value
+
+4. **"How reproducible is the method?"**
+   â†’ Analysis of same file produces identical results (fully automated), technical replicates show expected similarity
+
+5. **"Why these specific parameter values?"**
+   â†’ Optimized for intestinal smooth muscle physiology (typical contraction duration ~1-2 sec, frequency 20-30 cpm), validated across multiple recordings and conditions
+
+---
+
+## Notes for Your Specific Paper:
+
+**If studying Piezo1:**
+Emphasize that detection parameters were optimized to capture potential drug-induced changes in contraction frequency/kinetics, not just baseline activity.
+
+**If comparing genotypes:**
+Note that irregular contractions in knockout mice (higher CV%) represent biological variability, not detection errors.
+
+**If studying development:**
+May need to mention if different parameters were used for neonatal tissue (if you end up needing different settings).
+
+**If studying calcium handling:**
+Emphasize that amplitude threshold prevents counting baseline noise when contractions are abolished by calcium store depletion.
+
+---
+
+**This methods section can be adapted to your specific journal's requirements and word limits.**

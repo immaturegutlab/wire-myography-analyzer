@@ -45,24 +45,65 @@ def sort_by_age_then_sex(subject_id):
     sex_rank = 0 if '_M' in str(subject_id).upper() else 1
     return (age_rank, prefix, sex_rank, str(subject_id))
 
+def _extract_condition_group(condition_str):
+    """Extract generic Pre/Post group from a condition string.
+    E.g., 'PrePax10' -> 'PrePax', 'PostRyan5' -> 'PostRyan', 'Baseline' -> 'Baseline'
+    Strips trailing digits (dose) and groups by Pre/Post + drug name."""
+    s = str(condition_str)
+    # Strip trailing digits (dose number)
+    base = re.sub(r'\d+$', '', s)
+    if base.startswith('Pre') and len(base) > 3:
+        return base  # e.g., PrePax, PreRyan
+    if base.startswith('Post') and len(base) > 4:
+        return base  # e.g., PostPax, PostRyan
+    return None  # Not a Pre/Post condition
+
 def detect_conditions(filenames):
-    """Detect conditions from filenames"""
+    """Detect conditions from filenames.
+    Pre* and Post* conditions automatically become separate columns."""
     raw = set(str(f).split('_')[-1] for f in filenames)
     conditions = []
+    pre_groups = set()
+    post_groups = set()
+    other_treatments = []
+    
+    for c in raw:
+        if c == 'Baseline' or c == 'Y2':
+            continue
+        group = _extract_condition_group(c)
+        if group and group.startswith('Pre'):
+            pre_groups.add(group)
+        elif group and group.startswith('Post'):
+            post_groups.add(group)
+        else:
+            other_treatments.append(c)
+    
+    # Build ordered condition list: Baseline, Pre*, Treatment, Y2, Post*
     if 'Baseline' in raw:
         conditions.append('Baseline')
-    treatments = [c for c in raw if c not in ['Baseline', 'Y2']]
-    if treatments:
+    for pg in sorted(pre_groups):
+        conditions.append(pg)
+    if other_treatments:
         conditions.append('Treatment')
     if 'Y2' in raw:
         conditions.append('Y2')
-    return conditions or ['Baseline'], sorted(treatments)
+    for pg in sorted(post_groups):
+        conditions.append(pg)
+    
+    all_treatments = sorted(other_treatments) + sorted(
+        [c for c in raw if c not in ['Baseline', 'Y2'] and _extract_condition_group(c)])
+    return conditions or ['Baseline'], all_treatments
 
 def get_condition(filename, treatments):
-    """Get condition from filename"""
+    """Get condition from filename.
+    Pre*/Post* conditions map to their group name (e.g., PrePax10 -> PrePax)."""
     f = str(filename)
     if f.endswith('_Baseline'): return 'Baseline'
     if f.endswith('_Y2'): return 'Y2'
+    last = f.split('_')[-1]
+    group = _extract_condition_group(last)
+    if group:
+        return group
     for t in treatments:
         if f.endswith(f'_{t}'): return 'Treatment'
     return 'Baseline'
@@ -84,8 +125,8 @@ def parse_subject_id(filename_base):
         r'(\d{8})_(NEO|P\d+|ADULT|Adult)_([MF]|Male|male|Female|female)(\d+)_n(\d+(?:,\d+)?)',
         # Pattern 2: NEOMale1 or P14Male1 format (no underscore before sex)
         r'(\d{8})_(NEO|P\d+|ADULT|Adult)([MF]|Male|male|Female|female)(\d+)_n(\d+(?:,\d+)?)',
-        # Pattern 3: Experiment marker format - R_Male1, Th_Female2, KO_Male1, etc.
-        r'(\d{8})_(R|Th|KO|WT|ShWT|sham)_([MF]|Male|male|Female|female)(\d+)_n(\d+(?:,\d+)?)',
+        # Pattern 3: Experiment marker format - any project code (R_, Th_, Px_, KO_, Gd_, CPA_, etc.)
+        r'(\d{8})_([A-Za-z][A-Za-z0-9]*)_([MF]|Male|male|Female|female)(\d+)_n(\d+(?:,\d+)?)',
         # Pattern 4: Simple format - Male1_n1 (no age or experiment marker)
         r'(\d{8})_([MF]|Male|male|Female|female)(\d+)_n(\d+(?:,\d+)?)',
     ]
@@ -237,8 +278,10 @@ def process_file(input_file, exclude_subjects=None):
     
     # Build headers
     pct_cols = []
-    if 'Treatment' in conditions: pct_cols.append(('Treatment', '%chg_Trt'))
-    if 'Y2' in conditions: pct_cols.append(('Y2', '%chg_Y2'))
+    for c in conditions:
+        if c == 'Baseline':
+            continue
+        pct_cols.append((c, f'%chg_{c}'))
     
     col = 1
     for h in ["Sex", "Subject_ID", "Filename_Base"]:

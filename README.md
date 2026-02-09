@@ -1,4 +1,4 @@
-# Wire Myography Analysis Toolkit v3.1
+# Wire Myography Analysis Toolkit v4.0
 
 **Immature Gut Biology Lab, Division of Neonatology, UC Davis Children's Hospital**
 
@@ -12,11 +12,11 @@ This toolkit processes raw force recordings from wire myography experiments on m
 
 The toolkit consists of three scripts that form a pipeline:
 
-| Script | Purpose | Input | Output |
-|--------|---------|-------|--------|
-| `myography_analyzer.py` | Core analysis (publication code) | Raw .txt files | Excel + validation plots |
-| `myography_organizer.py` | Split mixed experiments | Analyzer Excel | Separate Excel per experiment |
-| `smart_prism_converter_v3.py` | Format for GraphPad Prism | Any analyzer Excel | Prism-ready Excel with animal averages |
+| Script | Version | Purpose | Input | Output |
+|--------|---------|---------|-------|--------|
+| `myography_analyzer_v4.py` | v4.0 | Core analysis (publication code) | Raw .txt files | Excel + validation plots |
+| `myography_organizer_v2_2.py` | v2.2 | Split mixed experiments | Analyzer Excel | Separate Excel per experiment |
+| `smart_prism_converter_v3.py` | v3 | Format for GraphPad Prism | Any analyzer Excel | Prism-ready Excel with animal averages |
 
 ---
 
@@ -38,7 +38,7 @@ pip3 install numpy pandas scipy openpyxl matplotlib
 ```
 MyProject/
   1_RawData/       <-- put your LabChart .txt exports here
-  2_Processed/     <-- files move here after analysis
+  2_Processed/     <-- files move here after analysis (in timestamped batch folders)
   3_Results/       <-- output goes here (created automatically)
 ```
 
@@ -47,43 +47,59 @@ MyProject/
 Follow this convention:
 
 ```
-[Date]_[Marker]_[Sex][MouseNum]_n[SegmentNum]_[Condition].txt
+[Date]_[Code]_[Sex][MouseNum]_n[SegmentNum]_[Condition].txt
 ```
 
 Examples:
 ```
-20260101_R_Male1_n1_Baseline.txt
+20260101_R_Male1_n1_Baseline.txt       (Ryanodine experiment)
 20260101_R_Male1_n1_RyR100.txt
 20260101_R_Male1_n1_Y2.txt
-20260101_Th_Female2_n1_Baseline.txt
-20260101_Th_Female2_n1_Thapsi10.txt
-20260101_KO_Male3_n1_Baseline.txt
-20260101_Male1_n1_Baseline.txt        (no experiment marker is fine too)
+20260101_Th_Female2_n1_Thapsi10.txt    (Thapsigargin experiment)
+20260101_Px_Male1_n1_PostPax10.txt     (Paxilline experiment)
+20260101_Px_Female1_n3_PrePax5.txt     (Paxilline Pre-Y2)
+20260101_KO_Male3_n1_Baseline.txt      (ICC Knockout)
+20260101_Male1_n1_Baseline.txt         (Yoda-only, no code needed)
+20260101_CPA_Male1_n1_CPA10.txt        (any new drug -- auto-detected)
 ```
 
-Supported experiment markers: `R_`, `Th_`, `KO_`, `WT_`, `ShWT_`, `sham_`
+The project code is generic. Known codes (R, Th, Px, KO, ShWT, sham) map to friendly folder names. Any unknown code automatically creates a new experiment folder using the code itself.
 
 Supported age prefixes: `P7NEO`, `P14NEO`, `P28NEO`, `P56NEO`, `ADULT`, `NEO`
 
 ### 3. Run the analyzer
 
 ```bash
-python3 myography_analyzer.py path/to/MyProject
+python3 myography_analyzer_v4.py path/to/MyProject
 ```
 
-That's it. The script finds `1_RawData/`, processes every `.txt` file, and writes results to `3_Results/`.
+The script finds `1_RawData/`, processes every `.txt` file, and writes results to `3_Results/`.
+
+Processed raw files are moved into a timestamped batch folder inside `2_Processed/` (e.g., `Batch_20260206_143022/`). The timestamp matches the Excel output file. You can freely rename batch folders (e.g., to `Pax_Round2` or `Rerun_higher_dose`) without affecting anything downstream.
 
 ### 4. Check your validation plots
 
 Open `3_Results/validation_plots/`. Each plot shows the raw trace (blue), detected peaks (red dots), baseline (green dashed), and threshold (pink dotted). Verify that peaks land on real contractions and no obvious contractions are missed.
 
-### 5. Convert to Prism format
+### 5. Organize by experiment (if mixed)
+
+```bash
+python3 myography_organizer_v2_2.py path/to/MyProject/3_Results
+```
+
+Auto-detects project codes from filenames and creates separate folders. Unknown codes get their own folder automatically.
+
+### 6. Convert to Prism format
+
+```bash
+python3 smart_prism_converter_v3.py path/to/Results/Ryanodine/Ryanodine.xlsx
+```
+
+Or run without arguments for a file picker dialog:
 
 ```bash
 python3 smart_prism_converter_v3.py
 ```
-
-A file picker opens. Select your Excel file. The converter creates a `_Prism.xlsx` file with animal averages, percent changes, and time-binned data formatted for direct import into GraphPad Prism.
 
 ---
 
@@ -100,17 +116,17 @@ NO  --> Analyze --> Convert directly
 **Workflow A: Single experiment type (most common)**
 
 ```bash
-python3 myography_analyzer.py path/to/MyProject
-python3 smart_prism_converter_v3.py          # pick the Excel file
+python3 myography_analyzer_v4.py path/to/MyProject
+python3 smart_prism_converter_v3.py path/to/MyProject/3_Results/Myography_Analysis_*.xlsx
 ```
 
 **Workflow B: Mixed experiment types**
 
 ```bash
-python3 myography_analyzer.py path/to/MyProject
-python3 myography_organizer.py path/to/MyProject/3_Results path/to/MyProject
-python3 smart_prism_converter_v3.py          # pick Ryanodine/Ryanodine.xlsx
-python3 smart_prism_converter_v3.py          # pick Thapsigargin/Thapsigargin.xlsx
+python3 myography_analyzer_v4.py path/to/MyProject
+python3 myography_organizer_v2_2.py path/to/MyProject/3_Results
+python3 smart_prism_converter_v3.py path/to/MyProject/3_Results/Ryanodine/Ryanodine.xlsx
+python3 smart_prism_converter_v3.py path/to/MyProject/3_Results/Paxilline/Paxilline.xlsx
 ```
 
 ---
@@ -135,7 +151,7 @@ python3 smart_prism_converter_v3.py          # pick Thapsigargin/Thapsigargin.xl
 For weak contractions (neonatal tissue, drug-treated):
 
 ```bash
-python3 myography_analyzer.py path/to/MyProject 0.03
+python3 myography_analyzer_v4.py path/to/MyProject 0.03
 ```
 
 | Threshold | When to use |
@@ -145,20 +161,20 @@ python3 myography_analyzer.py path/to/MyProject 0.03
 | 0.08 mN | Standard (strong adult baseline) |
 | 0.10 mN | Less sensitive (noisy recordings) |
 
-### Output Metrics (34 total)
+### Output Metrics (20 total)
 
 **Overall_Metrics sheet** (one row per file):
 
 | Category | Metrics |
 |----------|---------|
-| Amplitude | Mean amplitude (mN), amplitude CV (%) |
+| Amplitude | Mean amplitude (mN) |
 | Frequency | Frequency (cpm), mean period (sec), period CV (%) |
-| Kinetics | Duration (sec), rise time (sec), relaxation time (sec), rise rate (mN/sec), relaxation rate (mN/sec), time to peak (sec), time from peak (sec), rise/fall ratio, FWHM (sec) |
-| Integral | Integral force (mN-sec), baseline tone (mN) |
-| Duty cycle | Duty cycle (%), total contraction time (sec), total quiescent time (sec) |
-| Tonic | Incomplete relaxation count and percentage, quiescent tone (mN), mean tonic force (mN), phasic/tonic ratio |
-| Composite | Force per contraction (mN-sec), force per minute (mN-sec/min), amplitude-frequency product, contraction work index |
-| QC | Amplitude flag |
+| Kinetics | Duration (sec), time to peak (sec), time from peak (sec), rise/fall ratio, max contraction rate (mN/s), max relaxation rate (mN/s) |
+| Integral | Integral force (mN-sec), force per contraction (mN-sec), force per minute (mN-sec/min) |
+| Duty cycle | Duty cycle (%) |
+| Tonic | Baseline tone (mN), phasic/tonic ratio |
+| Composite | Amplitude-frequency product |
+| QC | Contraction count, amplitude flag |
 
 **10sec_Bins sheet** (one row per 10-second bin per file):
 
@@ -169,35 +185,51 @@ Same core metrics calculated within each time bin, enabling visualization of dyn
 You can also specify input and output folders directly:
 
 ```bash
-python3 myography_analyzer.py ./input_folder ./output_folder 0.05
+python3 myography_analyzer_v4.py ./input_folder ./output_folder 0.05
 ```
 
 ---
 
 ## Organizer Details
 
-Classifies files by experiment type based on filename keywords:
+### Auto-detection system (v2.2)
 
-| Experiment | Keywords |
-|------------|----------|
-| Ryanodine | `R_`, `RyR`, `Ryanodine` |
-| Thapsigargin | `Th_`, `Thapsi`, `Thapsigargin` |
-| WT_vs_KO | `KO`, `ShWT`, `sham` |
-| Yoda_Only | Everything else |
+The organizer extracts the project code from the filename position (between date and sex) and routes files accordingly:
 
-Creates separate subfolders in `3_Results/` with filtered Excel files and validation plots for each experiment type.
+| Code | Folder Created |
+|------|---------------|
+| `R` | `Ryanodine/` |
+| `Th` | `Thapsigargin/` |
+| `Px` | `Paxilline/` |
+| `KO`, `ShWT`, `sham` | `WT_vs_KO/` |
+| _(none)_ | `Yoda_Only/` |
+| _(any unknown code)_ | Uses code as folder name |
+
+Unknown codes are fully supported. If a new experiment uses code `CPA`, the organizer creates a `CPA/` folder with the filtered Excel and validation plots. No code changes required.
 
 ---
 
 ## Prism Converter Details
 
 - Auto-detects conditions from filenames (Baseline, RyR100, Thapsi10, Y2, etc.)
-- Recognizes age prefixes (P7NEO, P14, ADULT) and experiment markers (R_, Th_, KO_)
+- Generic Pre/Post detection: any condition starting with `Pre` or `Post` automatically becomes a separate column (e.g., PrePax, PostPax, PreRyan, PostThap)
+- Recognizes any project code in filename position (generic, not hardcoded)
+- Recognizes age prefixes (P7NEO, P14, ADULT) for multi-age studies
 - Groups by age, then by sex (Male first, then Female)
 - Calculates animal averages from technical replicates (multiple segments per animal)
 - Computes percent change from baseline for each condition
 - Creates separate sheets for 10-second bin data (amplitude, frequency, period, duration, rise time, relaxation time, integral)
 - Preserves source data in SRC_ sheets for traceability
+
+### Condition column order
+
+Columns are arranged to match experimental sequence:
+
+```
+Baseline | Pre[Drug] | Treatment | Y2 | Post[Drug]
+```
+
+Each gets a corresponding percent-change column calculated relative to Baseline.
 
 ---
 
@@ -206,11 +238,11 @@ Creates separate subfolders in `3_Results/` with filtered Excel files and valida
 The toolkit recognizes these filename patterns (in order of matching priority):
 
 ```
-20260101_P7NEO_Male1_n1_Baseline.txt       (age prefix, no experiment marker)
-20260101_ADULT_Male1_n1_Y2.txt              (age prefix, no experiment marker)
-20260101_R_Male1_n1_Baseline.txt            (experiment marker, defaults to ADULT)
-20260101_Th_Female2_n1_Thapsi10.txt         (experiment marker, defaults to ADULT)
-20260101_KO_Male3_n1_Baseline.txt           (experiment marker, defaults to ADULT)
+20260101_P7NEO_Male1_n1_Baseline.txt       (age prefix, no project code)
+20260101_ADULT_Male1_n1_Y2.txt              (age prefix, no project code)
+20260101_R_Male1_n1_Baseline.txt            (project code, defaults to ADULT)
+20260101_Px_Female2_n1_PostPax10.txt        (project code with Pre/Post condition)
+20260101_CPA_Male1_n1_CPA10.txt             (unknown code, auto-detected)
 20260101_Male1_n1_Baseline.txt              (simple format, defaults to ADULT)
 ```
 
@@ -223,21 +255,27 @@ Segment notation: `n1`, `n2`, `n1,1` (comma notation for sub-segments)
 ```
 Master Wire Myography Folder/
   MyographyTools/
-    myography_analyzer.py
-    myography_organizer.py
+    myography_analyzer_v4.py
+    myography_organizer_v2_2.py
     smart_prism_converter_v3.py
     README.md
     METHODS_FOR_PUBLICATION.md
-    WORKFLOW_GUIDE.md
+    STUDENT_GUIDE.md
   Projects/
     Piezo1_Adult/
       1_RawData/
       2_Processed/
+        Batch_20260206_143022/   (auto-created, renameable)
+        Batch_20260210_091500/
       3_Results/
         Myography_Analysis_YYYYMMDD_HHMMSS.xlsx
         validation_plots/
-        Ryanodine/           (if organized)
-        Thapsigargin/        (if organized)
+        Ryanodine/           (auto-created by organizer)
+        Thapsigargin/        (auto-created by organizer)
+        Paxilline/           (auto-created by organizer)
+        WT_vs_KO/            (auto-created by organizer)
+        Yoda_Only/           (auto-created by organizer)
+        [NewCode]/           (auto-created for unknown codes)
 ```
 
 ---
@@ -251,7 +289,7 @@ Check your path with `ls`. The most common issue is a typo or being in the wrong
 Run: `pip3 install numpy pandas scipy openpyxl matplotlib`
 
 **"0 contractions detected" but contractions are visible in LabChart**
-Check the validation plot. If signal is below 0.05 mN, try: `python3 myography_analyzer.py path/to/Project 0.03`
+Check the validation plot. If signal is below 0.05 mN, try: `python3 myography_analyzer_v4.py path/to/Project 0.03`
 
 **"does not contain a 1_RawData/ folder"**
 You pointed at the wrong folder. The script expects `1_RawData/` inside the folder you specify.
@@ -259,8 +297,11 @@ You pointed at the wrong folder. The script expects `1_RawData/` inside the fold
 **Prism converter says "WARNING: Could not auto-detect"**
 Your filenames do not match any recognized pattern. Check the File Naming Conventions section above.
 
-**Trailing spaces in filenames cause scattered data**
-Fixed in v3.1. The analyzer and converter both strip whitespace from filenames automatically.
+**Doubled dates in Prism output (e.g., 20251015_20251015_...)**
+Your project code is not being recognized. Make sure the code is a single token between the date and sex (e.g., `20251015_Px_Male1...` not `20251015_Paxilline_Male1...`).
+
+**PrePax and PostPax collapsed into one "Treatment" column**
+Update to the latest smart_prism_converter_v3.py. Pre/Post conditions are now auto-separated.
 
 ---
 
@@ -279,10 +320,13 @@ Fixed in v3.1. The analyzer and converter both strip whitespace from filenames a
 
 ## Version History
 
-- **v3.1** (Feb 2026) -- Single-command project mode. Fixed kinetics calculations (relaxation time was inflated 5.3x, rise time inflated 32% in earlier versions). Added time-to-peak, time-from-peak, rise/fall ratio metrics. Width filter reduced from 0.6 to 0.3 seconds to capture faster contractions. Filename whitespace stripping. Prism converter support for experiment marker filenames (R_, Th_, KO_, etc.).
-- **v3.0** (Feb 2026) -- Fixed-parameter detection for reproducibility. Amplitude flagging system. Comprehensive duty cycle and tonic metrics.
-- **v2.7-v2.9** -- Duration correction (v2.7 fixed 2x overcount), parameter tuning, neonatal tissue support.
-- **v1.0-v2.6** -- Initial development, iterative refinement.
+See VERSION_HISTORY.md for full changelog.
+
+- **v4.0** (Feb 2026) -- Generic project code system (no hardcoded experiment lists). Pre/Post condition auto-separation in Prism converter. Paxilline experiment support. Organizer auto-creates folders for unknown codes. Batch subfolders in 2_Processed for run isolation. Fixed doubled-date parsing bug for new project codes.
+- **v3.1** (Feb 2026) -- Single-command project mode. Fixed kinetics calculations. Added time-to-peak, time-from-peak, rise/fall ratio. Width filter reduced to 0.3 seconds.
+- **v3.0** (Feb 2026) -- Fixed-parameter detection for reproducibility. Amplitude flagging. Comprehensive duty cycle and tonic metrics.
+- **v2.7** (Jan 2026) -- CRITICAL FIX: Duration calculation error (was 2x too large in v2.6).
+- **v1.0-v2.6** -- Initial development. Deprecated (duration values incorrect).
 
 ---
 
@@ -290,7 +334,7 @@ Fixed in v3.1. The analyzer and converter both strip whitespace from filenames a
 
 If you use this software in published work, please cite:
 
-> Bautista G. Wire Myography Analyzer v3.1. Immature Gut Biology Lab, Division of Neonatology, UC Davis Children's Hospital. 2026. Available at: [repository URL]
+> Bautista G. Wire Myography Analysis Toolkit v4.0. Immature Gut Biology Lab, Division of Neonatology, UC Davis Children's Hospital. 2026. DOI: 10.5281/zenodo.18472624
 
 See METHODS_FOR_PUBLICATION.md for ready-to-use methods text.
 
